@@ -5,17 +5,70 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SVG Jitter Tool - Web Version</title>
     <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --panel-bg: white;
+            --panel-border: #ddd;
+            --heading-color: #555;
+            --input-border: #ddd;
+            --button-bg: #4CAF50;
+            --button-hover: #45a049;
+            --button-disabled: #cccccc;
+            --instructions-bg: #e3f2fd;
+            --instructions-border: #2196F3;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --success-border: #c3e6cb;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
+            --error-border: #f5c6cb;
+            --drop-zone-bg: #f9f9f9;
+            --drop-zone-hover: #f0f0f0;
+            --drop-zone-border: #ccc;
+            --loading-color: #666;
+            --coordinate-overlay-bg: rgba(0, 0, 0, 0.7);
+        }
+        
+        .dark-mode {
+            --bg-color: #1e1e1e;
+            --text-color: #e0e0e0;
+            --panel-bg: #2d2d30;
+            --panel-border: #3f3f46;
+            --heading-color: #e0e0e0;
+            --input-border: #3f3f46;
+            --button-bg: #107c10;
+            --button-hover: #0d6b0d;
+            --button-disabled: #555555;
+            --instructions-bg: #1a365d;
+            --instructions-border: #2b6cb0;
+            --success-bg: #224a22;
+            --success-text: #a0d9a0;
+            --success-border: #3b8c3b;
+            --error-bg: #5c1f1f;
+            --error-text: #f0a0a0;
+            --error-border: #a33d3d;
+            --drop-zone-bg: #252526;
+            --drop-zone-hover: #2a2a2c;
+            --drop-zone-border: #555;
+            --loading-color: #aaa;
+            --coordinate-overlay-bg: rgba(255, 255, 255, 0.9);
+        }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f5f5f5;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
         }
         
         h1 {
-            color: #333;
+            color: var(--text-color);
             text-align: center;
+            font-weight: 600;
         }
         
         .container {
@@ -31,27 +84,31 @@
         }
         
         .panel {
-            background: white;
+            background: var(--panel-bg);
             border-radius: 8px;
             padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            border: 1px solid var(--panel-border);
         }
         
         h2 {
             margin-top: 0;
-            color: #555;
-            border-bottom: 2px solid #eee;
+            color: var(--heading-color);
+            border-bottom: 2px solid var(--panel-border);
             padding-bottom: 10px;
+            font-weight: 600;
         }
         
         textarea {
             width: 100%;
             height: 200px;
-            font-family: monospace;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--input-border);
             border-radius: 4px;
             resize: vertical;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
         }
         
         .config-group {
@@ -72,7 +129,8 @@
             display: inline-block;
             width: 50px;
             text-align: right;
-            font-family: monospace;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-weight: bold;
         }
         
         .checkbox-group {
@@ -85,7 +143,7 @@
         }
         
         button {
-            background-color: #4CAF50;
+            background-color: var(--button-bg);
             color: white;
             border: none;
             padding: 10px 15px;
@@ -96,14 +154,16 @@
             margin: 4px 2px;
             cursor: pointer;
             border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-weight: 500;
         }
         
         button:hover {
-            background-color: #45a049;
+            background-color: var(--button-hover);
         }
         
         button:disabled {
-            background-color: #cccccc;
+            background-color: var(--button-disabled);
             cursor: not-allowed;
         }
         
@@ -111,27 +171,25 @@
             position: relative;
             min-height: 300px;
             height: 400px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--panel-border);
             border-radius: 4px;
-            background: white;
+            background: var(--panel-bg);
             overflow: hidden;
             text-align: center;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: grab;
         }
         
         #preview-container svg {
             width: 100%;
             height: 100%;
             display: block;
-            transform-origin: center center;
         }
         
         .instructions {
-            background: #e3f2fd;
-            border-left: 4px solid #2196F3;
+            background: var(--instructions-bg);
+            border-left: 4px solid var(--instructions-border);
             padding: 15px;
             margin: 20px 0;
             border-radius: 0 4px 4px 0;
@@ -144,53 +202,38 @@
         }
         
         .success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background-color: var(--success-bg);
+            color: var(--success-text);
+            border: 1px solid var(--success-border);
         }
         
         .error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background-color: var(--error-bg);
+            color: var(--error-text);
+            border: 1px solid var(--error-border);
         }
         
         .hidden {
             display: none;
         }
         
-        .preview-controls {
-            margin-bottom: 10px;
-        }
-        
-        .preview-controls button {
-            margin-right: 10px;
-            padding: 5px 10px;
-            font-size: 14px;
-        }
-        
-        #zoom-level {
-            font-weight: bold;
-            margin-left: 10px;
-        }
-        
         .drop-zone {
-            border: 2px dashed #ccc;
+            border: 2px dashed var(--drop-zone-border);
             border-radius: 4px;
             padding: 20px;
             text-align: center;
             margin: 10px 0;
             cursor: pointer;
-            background-color: #f9f9f9;
+            background-color: var(--drop-zone-bg);
         }
         
         .drop-zone:hover {
-            background-color: #f0f0f0;
+            background-color: var(--drop-zone-hover);
         }
         
         .drop-zone p {
             margin: 0;
-            color: #666;
+            color: var(--text-color);
         }
         
         /* Loading indicator */
@@ -200,19 +243,7 @@
             left: 50%;
             transform: translate(-50%, -50%);
             font-size: 18px;
-            color: #666;
-        }
-        
-        /* Navigation history buttons */
-        .nav-history {
-            display: inline-block;
-            margin-left: 15px;
-        }
-        
-        .nav-history button {
-            padding: 5px 8px;
-            font-size: 12px;
-            margin: 0 2px;
+            color: var(--loading-color);
         }
         
         /* Coordinate overlay */
@@ -220,16 +251,39 @@
             position: absolute;
             top: 10px;
             left: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
+            background: var(--coordinate-overlay-bg);
+            color: var(--text-color);
             padding: 5px 10px;
             border-radius: 4px;
             font-size: 12px;
             pointer-events: none;
         }
+        
+        /* Dark mode toggle */
+        .dark-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        
+        .dark-mode-toggle:hover {
+            background: var(--button-bg);
+        }
     </style>
 </head>
 <body>
+    <div class="dark-mode-toggle" id="dark-mode-toggle">🌙</div>
     <h1>SVG Jitter Tool - Web Version</h1>
     
     <div class="container">
@@ -273,16 +327,6 @@
     
     <div class="panel">
         <h2>Preview</h2>
-        <div class="preview-controls">
-            <button id="fit-button">Fit to View</button>
-            <button id="zoom-in-button">Zoom In</button>
-            <button id="zoom-out-button">Zoom Out</button>
-            <span id="zoom-level">100%</span>
-            <div class="nav-history">
-                <button id="nav-back" disabled>←</button>
-                <button id="nav-forward" disabled>→</button>
-            </div>
-        </div>
         <div id="preview-container">
             <div class="loading" id="loading">Processing...</div>
             <div class="coordinate-overlay" id="coordinate-overlay"></div>
@@ -302,8 +346,7 @@
             <li>Adjust the jitter parameters using the sliders - preview updates automatically</li>
             <li>Set Jitter Amplitude to 0 for no effect</li>
             <li>Click "Copy Jittered SVG" to copy the result to your clipboard</li>
-            <li>Use zoom controls or mouse wheel to navigate the preview</li>
-            <li>Click and drag to pan around the preview</li>
+            <li>Use the drag & drop area to load SVG files</li>
         </ol>
     </div>
 
@@ -316,16 +359,9 @@
             curvy_lines: true
         };
         
-        // Zoom and pan variables
-        let currentScale = 1;
-        let currentX = 0;
-        let currentY = 0;
+        // Preview variables
         let isDragging = false;
         let startX, startY, startPanX, startPanY;
-        
-        // Navigation history
-        let navHistory = [];
-        let navHistoryIndex = -1;
         
         // DOM Elements
         const inputSvg = document.getElementById('input-svg');
@@ -340,16 +376,11 @@
         const curvyLines = document.getElementById('curvy-lines');
         const amplitudeValue = document.getElementById('amplitude-value');
         const frequencyValue = document.getElementById('frequency-value');
-        const fitButton = document.getElementById('fit-button');
-        const zoomInButton = document.getElementById('zoom-in-button');
-        const zoomOutButton = document.getElementById('zoom-out-button');
-        const zoomLevel = document.getElementById('zoom-level');
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
         const loadingIndicator = document.getElementById('loading');
         const coordinateOverlay = document.getElementById('coordinate-overlay');
-        const navBackBtn = document.getElementById('nav-back');
-        const navForwardBtn = document.getElementById('nav-forward');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
         
         // Throttling for parameter adjustments
         let throttleTimer = null;
@@ -751,13 +782,6 @@
                         // Update preview with proper SVG handling
                         updatePreview(jitteredSvg);
                         
-                        // Add to navigation history
-                        addToHistory({
-                            scale: currentScale,
-                            x: currentX,
-                            y: currentY
-                        });
-                        
                         // Show success message
                         showStatus('Jitter applied successfully!', 'success');
                     } catch (error) {
@@ -852,22 +876,6 @@
                 
                 // Add to container
                 previewContainer.appendChild(newSvg);
-                
-                // Use MutationObserver to detect when SVG is fully rendered
-                const observer = new MutationObserver(() => {
-                    // Once the SVG is in the DOM, fit to view
-                    setTimeout(() => {
-                        fitToView();
-                    }, 50);
-                });
-                
-                observer.observe(newSvg, { childList: true, subtree: true });
-                
-                // Also trigger fit after a short delay as fallback
-                setTimeout(() => {
-                    fitToView();
-                    observer.disconnect();
-                }, 500);
             }
         }
         
@@ -911,209 +919,36 @@
             }, 100);
         }
         
-        // Zoom and pan functions with proper coordinate system handling
-        function updateTransform() {
-            const svgElement = previewContainer.querySelector('svg');
-            if (svgElement) {
-                // Use CSS transform with proper transform-origin
-                svgElement.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
-                svgElement.style.transformOrigin = '0 0';
-                svgElement.style.willChange = 'transform'; // Optimize for performance
-                zoomLevel.textContent = `${Math.round(currentScale * 100)}%`;
-            }
-        }
-        
-        // Improved fitToView with better error handling and coordinate system preservation
-        function fitToView() {
-            const svgElement = previewContainer.querySelector('svg');
-            if (svgElement) {
-                try {
-                    // Get the viewBox dimensions
-                    const viewBoxAttr = svgElement.getAttribute('viewBox');
-                    if (viewBoxAttr) {
-                        const viewBoxValues = viewBoxAttr.split(' ').map(Number);
-                        if (viewBoxValues.length === 4) {
-                            const [viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight] = viewBoxValues;
-                            
-                            // Get container dimensions
-                            const containerWidth = previewContainer.clientWidth;
-                            const containerHeight = previewContainer.clientHeight;
-                            
-                            // Calculate scale to fit
-                            const scaleX = containerWidth / viewBoxWidth;
-                            const scaleY = containerHeight / viewBoxHeight;
-                            currentScale = Math.min(scaleX, scaleY) * 0.9; // 90% to add some padding
-                            
-                            // Center the content
-                            currentX = (containerWidth - viewBoxWidth * currentScale) / 2 - viewBoxX * currentScale;
-                            currentY = (containerHeight - viewBoxHeight * currentScale) / 2 - viewBoxY * currentScale;
-                        }
-                    } else {
-                        // Fallback to getBBox if no viewBox
-                        const bbox = svgElement.getBBox();
-                        if (bbox.width > 0 && bbox.height > 0) {
-                            // Get container dimensions
-                            const containerWidth = previewContainer.clientWidth;
-                            const containerHeight = previewContainer.clientHeight;
-                            
-                            // Calculate scale to fit
-                            const scaleX = containerWidth / bbox.width;
-                            const scaleY = containerHeight / bbox.height;
-                            currentScale = Math.min(scaleX, scaleY) * 0.9; // 90% to add some padding
-                            
-                            // Center the content
-                            currentX = (containerWidth - bbox.width * currentScale) / 2 - bbox.x * currentScale;
-                            currentY = (containerHeight - bbox.height * currentScale) / 2 - bbox.y * currentScale;
-                        }
-                    }
-                } catch (e) {
-                    console.log('Error in fitToView:', e);
-                    // Fallback to default
-                    currentScale = 1;
-                    currentX = 0;
-                    currentY = 0;
-                }
-            } else {
-                // Fallback to default
-                currentScale = 1;
-                currentX = 0;
-                currentY = 0;
-            }
-            updateTransform();
-        }
-        
+        // Zoom functions (removed for stable preview)
         function zoom(factor) {
-            currentScale *= factor;
-            // Limit zoom levels
-            currentScale = Math.min(Math.max(0.1, currentScale), 10);
-            updateTransform();
-            
-            // Add to navigation history
-            addToHistory({
-                scale: currentScale,
-                x: currentX,
-                y: currentY
-            });
+            // Function intentionally left empty for stable preview
         }
         
+        function updateTransform() {
+            // Function intentionally left empty for stable preview
+        }
+        
+        // Drag functions (removed for stable preview)
         function startDrag(e) {
-            if (e.target.closest('svg')) {
-                isDragging = true;
-                startX = e.clientX;
-                startY = e.clientY;
-                startPanX = currentX;
-                startPanY = currentY;
-                previewContainer.style.cursor = 'grabbing';
-                e.preventDefault();
-            }
+            // Function intentionally left empty for stable preview
         }
         
         function drag(e) {
-            if (isDragging) {
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
-                currentX = startPanX + dx;
-                currentY = startPanY + dy;
-                updateTransform();
-            }
+            // Function intentionally left empty for stable preview
         }
         
         function endDrag() {
-            if (isDragging) {
-                isDragging = false;
-                previewContainer.style.cursor = 'grab';
-                
-                // Add to navigation history
-                addToHistory({
-                    scale: currentScale,
-                    x: currentX,
-                    y: currentY
-                });
-            }
+            // Function intentionally left empty for stable preview
         }
         
+        // Wheel function (removed for stable preview)
         function handleWheel(e) {
-            const zoomIntensity = 0.1;
-            const wheel = e.deltaY < 0 ? 1 : -1;
-            const zoomFactor = 1 + wheel * zoomIntensity;
-            
-            // Get mouse position relative to container
-            const rect = previewContainer.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            
-            // Apply zoom
-            const oldScale = currentScale;
-            currentScale *= zoomFactor;
-            currentScale = Math.min(Math.max(0.1, currentScale), 10);
-            
-            // Adjust pan to zoom towards mouse position
-            currentX = mouseX - (mouseX - currentX) * (currentScale / oldScale);
-            currentY = mouseY - (mouseY - currentY) * (currentScale / oldScale);
-            
-            updateTransform();
-            e.preventDefault();
-            
-            // Add to navigation history
-            addToHistory({
-                scale: currentScale,
-                x: currentX,
-                y: currentY
-            });
+            // Function intentionally left empty for stable preview
         }
         
         // Navigation history functions
-        function addToHistory(state) {
-            // Remove any forward history if we're not at the end
-            if (navHistoryIndex < navHistory.length - 1) {
-                navHistory = navHistory.slice(0, navHistoryIndex + 1);
-            }
-            
-            // Add new state
-            navHistory.push({
-                scale: state.scale,
-                x: state.x,
-                y: state.y
-            });
-            
-            // Limit history size
-            if (navHistory.length > 50) {
-                navHistory.shift();
-            } else {
-                navHistoryIndex = navHistory.length - 1;
-            }
-            
-            // Update button states
-            updateNavButtons();
-        }
-        
-        function navigateBack() {
-            if (navHistoryIndex > 0) {
-                navHistoryIndex--;
-                const state = navHistory[navHistoryIndex];
-                currentScale = state.scale;
-                currentX = state.x;
-                currentY = state.y;
-                updateTransform();
-                updateNavButtons();
-            }
-        }
-        
-        function navigateForward() {
-            if (navHistoryIndex < navHistory.length - 1) {
-                navHistoryIndex++;
-                const state = navHistory[navHistoryIndex];
-                currentScale = state.scale;
-                currentX = state.x;
-                currentY = state.y;
-                updateTransform();
-                updateNavButtons();
-            }
-        }
-        
         function updateNavButtons() {
-            navBackBtn.disabled = navHistoryIndex <= 0;
-            navForwardBtn.disabled = navHistoryIndex >= navHistory.length - 1;
+            // Function no longer needed
         }
         
         // Coordinate overlay
@@ -1223,27 +1058,14 @@
             // Export SVG button
             exportSvgBtn.addEventListener('click', exportSvg);
             
-            // Zoom and fit buttons
-            fitButton.addEventListener('click', fitToView);
-            zoomInButton.addEventListener('click', () => zoom(1.2));
-            zoomOutButton.addEventListener('click', () => zoom(0.8));
-            
-            // Navigation history buttons
-            navBackBtn.addEventListener('click', navigateBack);
-            navForwardBtn.addEventListener('click', navigateForward);
-            
             // Drag and drop functionality
             dropZone.addEventListener('click', () => fileInput.click());
             fileInput.addEventListener('change', handleFileSelect);
             dropZone.addEventListener('dragover', handleDragOver);
             dropZone.addEventListener('drop', handleDrop);
             
-            // Pan functionality
-            previewContainer.addEventListener('mousedown', startDrag);
-            previewContainer.addEventListener('mousemove', drag);
-            previewContainer.addEventListener('mouseup', endDrag);
-            previewContainer.addEventListener('mouseleave', endDrag);
-            previewContainer.addEventListener('wheel', handleWheel);
+            // Dark mode toggle
+            darkModeToggle.addEventListener('click', toggleDarkMode);
             
             // Coordinate overlay
             previewContainer.addEventListener('mousemove', updateCoordinateOverlay);
@@ -1252,10 +1074,30 @@
             });
         }
         
+        // Dark mode functions
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            
+            // Update toggle button icon
+            if (document.body.classList.contains('dark-mode')) {
+                darkModeToggle.textContent = '☀️';
+                localStorage.setItem('darkMode', 'enabled');
+            } else {
+                darkModeToggle.textContent = '🌙';
+                localStorage.setItem('darkMode', 'disabled');
+            }
+        }
+        
         // Initialize with sample SVG
         window.addEventListener('load', () => {
             // Initialize event listeners
             initEventListeners();
+            
+            // Check for saved dark mode preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                document.body.classList.add('dark-mode');
+                darkModeToggle.textContent = '☀️';
+            }
             
             // Small delay to ensure DOM is fully loaded
             setTimeout(() => {
