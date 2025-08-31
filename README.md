@@ -25,6 +25,10 @@ A web-based tool for adding jitter effects to SVG paths. This tool allows you to
 
 The tool comes with a sample SVG to help you get started.
 
+## Visit the Tool
+
+You can use the tool directly in your browser at: https://blotzki.github.io/svg-jitter-tool
+
 ## License
 
 This project is open source and available under the MIT License.
