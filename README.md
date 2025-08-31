@@ -9,7 +9,7 @@ A web-based tool for adding jitter effects to SVG paths. This tool allows you to
 - Toggle between curvy and straight lines
 - Real-time preview
 - Export functionality
-- Zoom and pan controls
+- Dark mode support
 - Drag and drop SVG file support
 
 ## How to Use
@@ -18,8 +18,8 @@ A web-based tool for adding jitter effects to SVG paths. This tool allows you to
 2. Adjust the jitter parameters using the sliders - preview updates automatically
 3. Set Jitter Amplitude to 0 for no effect
 4. Click "Copy Jittered SVG" to copy the result to your clipboard
-5. Use zoom controls or mouse wheel to navigate the preview
-6. Click and drag to pan around the preview
+5. Use the drag & drop area to load SVG files
+6. Toggle dark mode using the button in the top-right corner
 
 ## Example
 
