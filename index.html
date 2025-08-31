@@ -293,6 +293,7 @@
   &lt;path d="M 10 10 L 190 10 L 190 190 L 10 190 Z" fill="none" stroke="black" stroke-width="2"/&gt;
   &lt;path d="M 50 50 C 100 20, 150 20, 150 50" fill="none" stroke="blue" stroke-width="2"/&gt;
   &lt;path d="M 50 100 Q 100 70, 150 100" fill="none" stroke="red" stroke-width="2"/&gt;
+  &lt;path d="M 100 50 C 100 22.38576250846453 122.38576250846453 0 150 0 C 177.61423749153547 0 200 22.38576250846453 200 50 C 200 77.61423749153547 177.61423749153547 100 150 100 C 122.38576250846453 100 100 77.61423749153547 100 50 Z" fill="none" stroke="green" stroke-width="2"/&gt;
 &lt;/svg&gt;</textarea>
         </div>
         
@@ -466,6 +467,56 @@
             return points;
         }
         
+        // Subdivision for cubic Bezier curves
+        function subdivideCubicBezier(p0, p1, p2, p3, numPoints) {
+            const points = [];
+            for (let i = 0; i <= numPoints; i++) {
+                const t = i / numPoints;
+                // Cubic Bezier formula: B(t) = (1-t)³P₀ + 3(1-t)²tP₁ + 3(1-t)t²P₂ + t³P₃
+                const oneMinusT = 1 - t;
+                const oneMinusTSquared = oneMinusT * oneMinusT;
+                const oneMinusTCubed = oneMinusTSquared * oneMinusT;
+                const tSquared = t * t;
+                const tCubed = tSquared * t;
+                
+                const real = oneMinusTCubed * p0.real + 
+                            3 * oneMinusTSquared * t * p1.real + 
+                            3 * oneMinusT * tSquared * p2.real + 
+                            tCubed * p3.real;
+                            
+                const imag = oneMinusTCubed * p0.imag + 
+                            3 * oneMinusTSquared * t * p1.imag + 
+                            3 * oneMinusT * tSquared * p2.imag + 
+                            tCubed * p3.imag;
+                            
+                points.push(new Complex(real, imag));
+            }
+            return points;
+        }
+        
+        // Subdivision for quadratic Bezier curves
+        function subdivideQuadraticBezier(p0, p1, p2, numPoints) {
+            const points = [];
+            for (let i = 0; i <= numPoints; i++) {
+                const t = i / numPoints;
+                // Quadratic Bezier formula: B(t) = (1-t)²P₀ + 2(1-t)tP₁ + t²P₂
+                const oneMinusT = 1 - t;
+                const oneMinusTSquared = oneMinusT * oneMinusT;
+                const tSquared = t * t;
+                
+                const real = oneMinusTSquared * p0.real + 
+                            2 * oneMinusT * t * p1.real + 
+                            tSquared * p2.real;
+                            
+                const imag = oneMinusTSquared * p0.imag + 
+                            2 * oneMinusT * t * p1.imag + 
+                            tSquared * p2.imag;
+                            
+                points.push(new Complex(real, imag));
+            }
+            return points;
+        }
+        
         function jitterPoints(points, amplitude) {
             const jitteredPoints = [];
             for (const point of points) {
@@ -490,7 +541,7 @@
                 points[points.length - 1] = points[0];
             }
             
-            let pathData = `M ${points[0].real} ${points[0].imag}`;
+            let pathData = `M ${points[0].real.toFixed(2)} ${points[0].imag.toFixed(2)}`;
             
             if (curvy && points.length > 2) {
                 // Create smooth curves using cubic Bezier segments
@@ -498,24 +549,47 @@
                     const start = points[i];
                     const end = points[i + 1];
                     
+                    // Calculate control points that maintain smoothness
+                    // This approach creates more natural curves by considering the direction
+                    // from the previous point to the current point and from the current 
+                    // point to the next point
+                    
                     let ctrl1, ctrl2;
                     
                     if (i === 0) {
-                        // First point
-                        const next = (i + 2 < points.length) ? points[i + 2] : points[i + 1];
-                        ctrl1 = start.add(end.sub(start).mul(0.3));
-                        ctrl2 = end.sub(next.sub(start).mul(0.3));
+                        // First segment
+                        if (points.length > 2) {
+                            // Calculate control point based on direction to next point
+                            const next = points[i + 2];
+                            const direction = next.sub(start);
+                            ctrl1 = start.add(direction.mul(0.25));
+                            ctrl2 = end.sub(direction.mul(0.25));
+                        } else {
+                            // Only two points, create a symmetric curve
+                            const dx = end.real - start.real;
+                            const dy = end.imag - start.imag;
+                            ctrl1 = new Complex(start.real + dx * 0.25, start.imag + dy * 0.25);
+                            ctrl2 = new Complex(end.real - dx * 0.25, end.imag - dy * 0.25);
+                        }
                     } else if (i === points.length - 2) {
                         // Last segment
                         const prev = points[i - 1];
-                        ctrl1 = start.add(end.sub(prev).mul(0.3));
-                        ctrl2 = end.sub(end.sub(start).mul(0.3));
+                        const direction = start.sub(prev);
+                        ctrl1 = start.add(direction.mul(0.25));
+                        ctrl2 = end.sub(direction.mul(0.25));
                     } else {
                         // Middle segments
                         const prev = points[i - 1];
                         const next = points[i + 2];
-                        ctrl1 = start.add(end.sub(prev).mul(0.3));
-                        ctrl2 = end.sub(next.sub(start).mul(0.3));
+                        
+                        // Calculate incoming direction (from previous to current)
+                        const inDirection = start.sub(prev);
+                        // Calculate outgoing direction (from current to next)
+                        const outDirection = next.sub(end);
+                        
+                        // Control points are placed along these directions
+                        ctrl1 = start.add(inDirection.mul(0.25));
+                        ctrl2 = end.sub(outDirection.mul(0.25));
                     }
                     
                     pathData += ` C ${ctrl1.real.toFixed(2)} ${ctrl1.imag.toFixed(2)} ${ctrl2.real.toFixed(2)} ${ctrl2.imag.toFixed(2)} ${end.real.toFixed(2)} ${end.imag.toFixed(2)}`;
@@ -552,6 +626,9 @@
             let currentPoint = new Complex(0, 0);
             let startPoint = new Complex(0, 0);
             
+            // Keep track of segment types to preserve curve information
+            let segmentTypes = [];
+            
             for (let i = 0; i < commands.length; i++) {
                 const cmd = commands[i];
                 const args = cmd.args;
@@ -562,6 +639,7 @@
                         startPoint = new Complex(args[0], args[1]);
                         if (allPoints.length === 0) {
                             allPoints.push(currentPoint);
+                            segmentTypes.push('M');
                         }
                         break;
                     case 'm':
@@ -569,6 +647,7 @@
                         startPoint = new Complex(currentPoint.real, currentPoint.imag);
                         if (allPoints.length === 0) {
                             allPoints.push(currentPoint);
+                            segmentTypes.push('m');
                         }
                         break;
                     case 'L':
@@ -589,9 +668,13 @@
                             
                             if (allPoints.length === 0) {
                                 allPoints = points;
+                                segmentTypes.push('L');
                             } else {
                                 // For subsequent segments, skip the first point
                                 allPoints = allPoints.concat(points.slice(1));
+                                for (let j = 1; j < points.length; j++) {
+                                    segmentTypes.push('L');
+                                }
                             }
                         }
                         break;
@@ -613,116 +696,139 @@
                             
                             if (allPoints.length === 0) {
                                 allPoints = points;
+                                segmentTypes.push('l');
                             } else {
                                 // For subsequent segments, skip the first point
                                 allPoints = allPoints.concat(points.slice(1));
+                                for (let j = 1; j < points.length; j++) {
+                                    segmentTypes.push('l');
+                                }
                             }
                         }
                         break;
                     case 'C':
                         {
-                            // For simplicity, we'll treat cubic Bezier as a line from start to end
-                            // In a full implementation, we would properly subdivide the Bezier curve
+                            // Properly handle cubic Bezier curves
                             const start = currentPoint;
+                            const ctrl1 = new Complex(args[0], args[1]);
+                            const ctrl2 = new Complex(args[2], args[3]);
                             const end = new Complex(args[4], args[5]);
                             currentPoint = end;
                             
-                            // Calculate number of subdivisions
-                            const length = end.sub(start).abs();
+                            // Calculate approximate length of the curve for subdivision
+                            // Using the distance between control points as an approximation
+                            const length = start.sub(ctrl1).abs() + ctrl1.sub(ctrl2).abs() + ctrl2.sub(end).abs();
                             // Convert frequency from 0-100 scale to a subdivision factor
-                            // 0 = no subdivisions, 100 = maximum subdivisions
-                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5; // Scale to 0-0.5 range for less extreme effect
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5;
                             const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
                             
-                            // Subdivide the line
-                            const points = subdivideLine(start, end, numPoints);
+                            // Subdivide the curve
+                            const points = subdivideCubicBezier(start, ctrl1, ctrl2, end, numPoints);
                             
                             if (allPoints.length === 0) {
                                 allPoints = points;
+                                segmentTypes.push('C');
                             } else {
                                 // For subsequent segments, skip the first point
                                 allPoints = allPoints.concat(points.slice(1));
+                                for (let j = 1; j < points.length; j++) {
+                                    segmentTypes.push('C');
+                                }
                             }
                         }
                         break;
                     case 'c':
                         {
-                            // For simplicity, we'll treat cubic Bezier as a line from start to end
+                            // Properly handle relative cubic Bezier curves
                             const start = currentPoint;
+                            const ctrl1 = new Complex(currentPoint.real + args[0], currentPoint.imag + args[1]);
+                            const ctrl2 = new Complex(currentPoint.real + args[2], currentPoint.imag + args[3]);
                             const end = new Complex(currentPoint.real + args[4], currentPoint.imag + args[5]);
                             currentPoint = end;
                             
-                            // Calculate number of subdivisions
-                            const length = end.sub(start).abs();
+                            // Calculate approximate length of the curve for subdivision
+                            const length = start.sub(ctrl1).abs() + ctrl1.sub(ctrl2).abs() + ctrl2.sub(end).abs();
                             // Convert frequency from 0-100 scale to a subdivision factor
-                            // 0 = no subdivisions, 100 = maximum subdivisions
-                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5; // Scale to 0-0.5 range for less extreme effect
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5;
                             const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
                             
-                            // Subdivide the line
-                            const points = subdivideLine(start, end, numPoints);
+                            // Subdivide the curve
+                            const points = subdivideCubicBezier(start, ctrl1, ctrl2, end, numPoints);
                             
                             if (allPoints.length === 0) {
                                 allPoints = points;
+                                segmentTypes.push('c');
                             } else {
                                 // For subsequent segments, skip the first point
                                 allPoints = allPoints.concat(points.slice(1));
+                                for (let j = 1; j < points.length; j++) {
+                                    segmentTypes.push('c');
+                                }
                             }
                         }
                         break;
                     case 'Q':
                         {
-                            // For simplicity, we'll treat quadratic Bezier as a line from start to end
+                            // Properly handle quadratic Bezier curves
                             const start = currentPoint;
+                            const ctrl = new Complex(args[0], args[1]);
                             const end = new Complex(args[2], args[3]);
                             currentPoint = end;
                             
-                            // Calculate number of subdivisions
-                            const length = end.sub(start).abs();
+                            // Calculate approximate length of the curve for subdivision
+                            const length = start.sub(ctrl).abs() + ctrl.sub(end).abs();
                             // Convert frequency from 0-100 scale to a subdivision factor
-                            // 0 = no subdivisions, 100 = maximum subdivisions
-                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5; // Scale to 0-0.5 range for less extreme effect
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5;
                             const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
                             
-                            // Subdivide the line
-                            const points = subdivideLine(start, end, numPoints);
+                            // Subdivide the curve
+                            const points = subdivideQuadraticBezier(start, ctrl, end, numPoints);
                             
                             if (allPoints.length === 0) {
                                 allPoints = points;
+                                segmentTypes.push('Q');
                             } else {
                                 // For subsequent segments, skip the first point
                                 allPoints = allPoints.concat(points.slice(1));
+                                for (let j = 1; j < points.length; j++) {
+                                    segmentTypes.push('Q');
+                                }
                             }
                         }
                         break;
                     case 'q':
                         {
-                            // For simplicity, we'll treat quadratic Bezier as a line from start to end
+                            // Properly handle relative quadratic Bezier curves
                             const start = currentPoint;
+                            const ctrl = new Complex(currentPoint.real + args[0], currentPoint.imag + args[1]);
                             const end = new Complex(currentPoint.real + args[2], currentPoint.imag + args[3]);
                             currentPoint = end;
                             
-                            // Calculate number of subdivisions
-                            const length = end.sub(start).abs();
+                            // Calculate approximate length of the curve for subdivision
+                            const length = start.sub(ctrl).abs() + ctrl.sub(end).abs();
                             // Convert frequency from 0-100 scale to a subdivision factor
-                            // 0 = no subdivisions, 100 = maximum subdivisions
-                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5; // Scale to 0-0.5 range for less extreme effect
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5;
                             const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
                             
-                            // Subdivide the line
-                            const points = subdivideLine(start, end, numPoints);
+                            // Subdivide the curve
+                            const points = subdivideQuadraticBezier(start, ctrl, end, numPoints);
                             
                             if (allPoints.length === 0) {
                                 allPoints = points;
+                                segmentTypes.push('q');
                             } else {
                                 // For subsequent segments, skip the first point
                                 allPoints = allPoints.concat(points.slice(1));
+                                for (let j = 1; j < points.length; j++) {
+                                    segmentTypes.push('q');
+                                }
                             }
                         }
                         break;
                     case 'Z':
                     case 'z':
                         currentPoint = startPoint;
+                        segmentTypes.push('Z');
                         break;
                 }
             }

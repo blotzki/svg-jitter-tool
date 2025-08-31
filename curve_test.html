@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Jitter Tool - Curve Preservation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .comparison {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .panel {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .svg-container {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            text-align: center;
+            padding: 10px;
+        }
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            font-family: monospace;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>SVG Jitter Tool - Curve Preservation Test</h1>
+    
+    <div class="comparison">
+        <div class="panel">
+            <h2>Original SVG</h2>
+            <div class="svg-container">
+                <svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Circle using cubic Bezier approximation -->
+                    <path d="M 100 50 C 100 22.38576250846453 122.38576250846453 0 150 0 C 177.61423749153547 0 200 22.38576250846453 200 50 C 200 77.61423749153547 177.61423749153547 100 150 100 C 122.38576250846453 100 100 77.61423749153547 100 50 Z" fill="none" stroke="blue" stroke-width="2"/>
+                    
+                    <!-- Quadratic Bezier curve -->
+                    <path d="M 50 150 Q 150 100, 250 150" fill="none" stroke="red" stroke-width="2"/>
+                </svg>
+            </div>
+            <textarea id="original-svg" readonly>&lt;svg width="300" height="200" xmlns="http://www.w3.org/2000/svg"&gt;
+    &lt;!-- Circle using cubic Bezier approximation --&gt;
+    &lt;path d="M 100 50 C 100 22.38576250846453 122.38576250846453 0 150 0 C 177.61423749153547 0 200 22.38576250846453 200 50 C 200 77.61423749153547 177.61423749153547 100 150 100 C 122.38576250846453 100 100 77.61423749153547 100 50 Z" fill="none" stroke="blue" stroke-width="2"/&gt;
+    
+    &lt;!-- Quadratic Bezier curve --&gt;
+    &lt;path d="M 50 150 Q 150 100, 250 150" fill="none" stroke="red" stroke-width="2"/&gt;
+&lt;/svg&gt;</textarea>
+        </div>
+        
+        <div class="panel">
+            <h2>Jittered SVG (Fixed)</h2>
+            <div class="svg-container">
+                <svg id="jittered-svg" width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- This will be replaced by the jittered version -->
+                </svg>
+            </div>
+            <textarea id="jittered-code" readonly></textarea>
+            <button onclick="applyJitter()">Apply Jitter</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const config = {
+            jitter_amplitude: 5.0,
+            segment_frequency: 50,
+            curvy_lines: true
+        };
+        
+        // Complex number helper
+        class Complex {
+            constructor(real, imag) {
+                this.real = real;
+                this.imag = imag;
+            }
+            
+            add(other) {
+                return new Complex(this.real + other.real, this.imag + other.imag);
+            }
+            
+            sub(other) {
+                return new Complex(this.real - other.real, this.imag - other.imag);
+            }
+            
+            mul(scalar) {
+                return new Complex(this.real * scalar, this.imag * scalar);
+            }
+            
+            abs() {
+                return Math.sqrt(this.real * this.real + this.imag * this.imag);
+            }
+        }
+        
+        // Random number generator
+        function randomUniform(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+        
+        // Path parsing functions
+        function parsePathData(d) {
+            const commands = [];
+            // This regex matches SVG path commands and their arguments
+            const regex = /([MmLlHhVvCcSsQqTtAaZz])\s*([^MmLlHhVvCcSsQqTtAaZz]*)/g;
+            let match;
+            
+            while ((match = regex.exec(d)) !== null) {
+                const command = match[1];
+                // Split the arguments by commas or spaces, filter out empty strings, and convert to numbers
+                const args = match[2].trim().split(/[\s,]+/).filter(x => x !== '').map(x => parseFloat(x));
+                commands.push({ command, args });
+            }
+            
+            return commands;
+        }
+        
+        // Subdivision functions
+        function subdivideLine(start, end, numPoints) {
+            const points = [];
+            for (let i = 0; i <= numPoints; i++) {
+                const t = i / numPoints;
+                const real = start.real + t * (end.real - start.real);
+                const imag = start.imag + t * (end.imag - start.imag);
+                points.push(new Complex(real, imag));
+            }
+            return points;
+        }
+        
+        // Subdivision for cubic Bezier curves
+        function subdivideCubicBezier(p0, p1, p2, p3, numPoints) {
+            const points = [];
+            for (let i = 0; i <= numPoints; i++) {
+                const t = i / numPoints;
+                // Cubic Bezier formula: B(t) = (1-t)³P₀ + 3(1-t)²tP₁ + 3(1-t)t²P₂ + t³P₃
+                const oneMinusT = 1 - t;
+                const oneMinusTSquared = oneMinusT * oneMinusT;
+                const oneMinusTCubed = oneMinusTSquared * oneMinusT;
+                const tSquared = t * t;
+                const tCubed = tSquared * t;
+                
+                const real = oneMinusTCubed * p0.real + 
+                            3 * oneMinusTSquared * t * p1.real + 
+                            3 * oneMinusT * tSquared * p2.real + 
+                            tCubed * p3.real;
+                            
+                const imag = oneMinusTCubed * p0.imag + 
+                            3 * oneMinusTSquared * t * p1.imag + 
+                            3 * oneMinusT * tSquared * p2.imag + 
+                            tCubed * p3.imag;
+                            
+                points.push(new Complex(real, imag));
+            }
+            return points;
+        }
+        
+        // Subdivision for quadratic Bezier curves
+        function subdivideQuadraticBezier(p0, p1, p2, numPoints) {
+            const points = [];
+            for (let i = 0; i <= numPoints; i++) {
+                const t = i / numPoints;
+                // Quadratic Bezier formula: B(t) = (1-t)²P₀ + 2(1-t)tP₁ + t²P₂
+                const oneMinusT = 1 - t;
+                const oneMinusTSquared = oneMinusT * oneMinusT;
+                const tSquared = t * t;
+                
+                const real = oneMinusTSquared * p0.real + 
+                            2 * oneMinusT * t * p1.real + 
+                            tSquared * p2.real;
+                            
+                const imag = oneMinusTSquared * p0.imag + 
+                            2 * oneMinusT * t * p1.imag + 
+                            tSquared * p2.imag;
+                            
+                points.push(new Complex(real, imag));
+            }
+            return points;
+        }
+        
+        function jitterPoints(points, amplitude) {
+            const jitteredPoints = [];
+            for (const point of points) {
+                // If amplitude is 0, don't apply any jitter
+                if (amplitude === 0) {
+                    jitteredPoints.push(point);
+                } else {
+                    const jitterX = randomUniform(-amplitude, amplitude);
+                    const jitterY = randomUniform(-amplitude, amplitude);
+                    jitteredPoints.push(new Complex(point.real + jitterX, point.imag + jitterY));
+                }
+            }
+            return jitteredPoints;
+        }
+        
+        // Convert points to path data
+        function pointsToPathData(points, closed, curvy) {
+            if (points.length < 2) return "";
+            
+            // If the path is closed, ensure it remains closed
+            if (closed && points.length > 2) {
+                points[points.length - 1] = points[0];
+            }
+            
+            let pathData = `M ${points[0].real.toFixed(2)} ${points[0].imag.toFixed(2)}`;
+            
+            if (curvy && points.length > 2) {
+                // Create smooth curves using cubic Bezier segments
+                for (let i = 0; i < points.length - 1; i++) {
+                    const start = points[i];
+                    const end = points[i + 1];
+                    
+                    // Calculate control points that maintain smoothness
+                    // This approach creates more natural curves by considering the direction
+                    // from the previous point to the current point and from the current 
+                    // point to the next point
+                    
+                    let ctrl1, ctrl2;
+                    
+                    if (i === 0) {
+                        // First segment
+                        if (points.length > 2) {
+                            // Calculate control point based on direction to next point
+                            const next = points[i + 2];
+                            const direction = next.sub(start);
+                            ctrl1 = start.add(direction.mul(0.25));
+                            ctrl2 = end.sub(direction.mul(0.25));
+                        } else {
+                            // Only two points, create a symmetric curve
+                            const dx = end.real - start.real;
+                            const dy = end.imag - start.imag;
+                            ctrl1 = new Complex(start.real + dx * 0.25, start.imag + dy * 0.25);
+                            ctrl2 = new Complex(end.real - dx * 0.25, end.imag - dy * 0.25);
+                        }
+                    } else if (i === points.length - 2) {
+                        // Last segment
+                        const prev = points[i - 1];
+                        const direction = start.sub(prev);
+                        ctrl1 = start.add(direction.mul(0.25));
+                        ctrl2 = end.sub(direction.mul(0.25));
+                    } else {
+                        // Middle segments
+                        const prev = points[i - 1];
+                        const next = points[i + 2];
+                        
+                        // Calculate incoming direction (from previous to current)
+                        const inDirection = start.sub(prev);
+                        // Calculate outgoing direction (from current to next)
+                        const outDirection = next.sub(end);
+                        
+                        // Control points are placed along these directions
+                        ctrl1 = start.add(inDirection.mul(0.25));
+                        ctrl2 = end.sub(outDirection.mul(0.25));
+                    }
+                    
+                    pathData += ` C ${ctrl1.real.toFixed(2)} ${ctrl1.imag.toFixed(2)} ${ctrl2.real.toFixed(2)} ${ctrl2.imag.toFixed(2)} ${end.real.toFixed(2)} ${end.imag.toFixed(2)}`;
+                }
+            } else {
+                // Create straight line segments
+                for (let i = 1; i < points.length; i++) {
+                    pathData += ` L ${points[i].real.toFixed(2)} ${points[i].imag.toFixed(2)}`;
+                }
+            }
+            
+            if (closed) {
+                pathData += " Z";
+            }
+            
+            return pathData;
+        }
+        
+        // Process a single path
+        function processPath(d) {
+            const commands = parsePathData(d);
+            if (commands.length === 0) return d;
+            
+            // Check if path is closed
+            const isClosed = commands.some(cmd => cmd.command === 'Z' || cmd.command === 'z');
+            
+            // If jitter amplitude is 0, return the original path data
+            if (config.jitter_amplitude === 0) {
+                return d;
+            }
+            
+            // Collect all points from the path
+            let allPoints = [];
+            let currentPoint = new Complex(0, 0);
+            let startPoint = new Complex(0, 0);
+            
+            for (let i = 0; i < commands.length; i++) {
+                const cmd = commands[i];
+                const args = cmd.args;
+                
+                switch (cmd.command) {
+                    case 'M':
+                        currentPoint = new Complex(args[0], args[1]);
+                        startPoint = new Complex(args[0], args[1]);
+                        if (allPoints.length === 0) {
+                            allPoints.push(currentPoint);
+                        }
+                        break;
+                    case 'm':
+                        currentPoint = new Complex(currentPoint.real + args[0], currentPoint.imag + args[1]);
+                        startPoint = new Complex(currentPoint.real, currentPoint.imag);
+                        if (allPoints.length === 0) {
+                            allPoints.push(currentPoint);
+                        }
+                        break;
+                    case 'L':
+                        {
+                            const start = currentPoint;
+                            const end = new Complex(args[0], args[1]);
+                            currentPoint = end;
+                            
+                            // Calculate number of subdivisions
+                            const length = end.sub(start).abs();
+                            // Convert frequency from 0-100 scale to a subdivision factor
+                            // 0 = no subdivisions, 100 = maximum subdivisions
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5; // Scale to 0-0.5 range for less extreme effect
+                            const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
+                            
+                            // Subdivide the line
+                            const points = subdivideLine(start, end, numPoints);
+                            
+                            if (allPoints.length === 0) {
+                                allPoints = points;
+                            } else {
+                                // For subsequent segments, skip the first point
+                                allPoints = allPoints.concat(points.slice(1));
+                            }
+                        }
+                        break;
+                    case 'l':
+                        {
+                            const start = currentPoint;
+                            const end = new Complex(currentPoint.real + args[0], currentPoint.imag + args[1]);
+                            currentPoint = end;
+                            
+                            // Calculate number of subdivisions
+                            const length = end.sub(start).abs();
+                            // Convert frequency from 0-100 scale to a subdivision factor
+                            // 0 = no subdivisions, 100 = maximum subdivisions
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5; // Scale to 0-0.5 range for less extreme effect
+                            const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
+                            
+                            // Subdivide the line
+                            const points = subdivideLine(start, end, numPoints);
+                            
+                            if (allPoints.length === 0) {
+                                allPoints = points;
+                            } else {
+                                // For subsequent segments, skip the first point
+                                allPoints = allPoints.concat(points.slice(1));
+                            }
+                        }
+                        break;
+                    case 'C':
+                        {
+                            // Properly handle cubic Bezier curves
+                            const start = currentPoint;
+                            const ctrl1 = new Complex(args[0], args[1]);
+                            const ctrl2 = new Complex(args[2], args[3]);
+                            const end = new Complex(args[4], args[5]);
+                            currentPoint = end;
+                            
+                            // Calculate approximate length of the curve for subdivision
+                            // Using the distance between control points as an approximation
+                            const length = start.sub(ctrl1).abs() + ctrl1.sub(ctrl2).abs() + ctrl2.sub(end).abs();
+                            // Convert frequency from 0-100 scale to a subdivision factor
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5;
+                            const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
+                            
+                            // Subdivide the curve
+                            const points = subdivideCubicBezier(start, ctrl1, ctrl2, end, numPoints);
+                            
+                            if (allPoints.length === 0) {
+                                allPoints = points;
+                            } else {
+                                // For subsequent segments, skip the first point
+                                allPoints = allPoints.concat(points.slice(1));
+                            }
+                        }
+                        break;
+                    case 'c':
+                        {
+                            // Properly handle relative cubic Bezier curves
+                            const start = currentPoint;
+                            const ctrl1 = new Complex(currentPoint.real + args[0], currentPoint.imag + args[1]);
+                            const ctrl2 = new Complex(currentPoint.real + args[2], currentPoint.imag + args[3]);
+                            const end = new Complex(currentPoint.real + args[4], currentPoint.imag + args[5]);
+                            currentPoint = end;
+                            
+                            // Calculate approximate length of the curve for subdivision
+                            const length = start.sub(ctrl1).abs() + ctrl1.sub(ctrl2).abs() + ctrl2.sub(end).abs();
+                            // Convert frequency from 0-100 scale to a subdivision factor
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5;
+                            const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
+                            
+                            // Subdivide the curve
+                            const points = subdivideCubicBezier(start, ctrl1, ctrl2, end, numPoints);
+                            
+                            if (allPoints.length === 0) {
+                                allPoints = points;
+                            } else {
+                                // For subsequent segments, skip the first point
+                                allPoints = allPoints.concat(points.slice(1));
+                            }
+                        }
+                        break;
+                    case 'Q':
+                        {
+                            // Properly handle quadratic Bezier curves
+                            const start = currentPoint;
+                            const ctrl = new Complex(args[0], args[1]);
+                            const end = new Complex(args[2], args[3]);
+                            currentPoint = end;
+                            
+                            // Calculate approximate length of the curve for subdivision
+                            const length = start.sub(ctrl).abs() + ctrl.sub(end).abs();
+                            // Convert frequency from 0-100 scale to a subdivision factor
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5;
+                            const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
+                            
+                            // Subdivide the curve
+                            const points = subdivideQuadraticBezier(start, ctrl, end, numPoints);
+                            
+                            if (allPoints.length === 0) {
+                                allPoints = points;
+                            } else {
+                                // For subsequent segments, skip the first point
+                                allPoints = allPoints.concat(points.slice(1));
+                            }
+                        }
+                        break;
+                    case 'q':
+                        {
+                            // Properly handle relative quadratic Bezier curves
+                            const start = currentPoint;
+                            const ctrl = new Complex(currentPoint.real + args[0], currentPoint.imag + args[1]);
+                            const end = new Complex(currentPoint.real + args[2], currentPoint.imag + args[3]);
+                            currentPoint = end;
+                            
+                            // Calculate approximate length of the curve for subdivision
+                            const length = start.sub(ctrl).abs() + ctrl.sub(end).abs();
+                            // Convert frequency from 0-100 scale to a subdivision factor
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5;
+                            const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
+                            
+                            // Subdivide the curve
+                            const points = subdivideQuadraticBezier(start, ctrl, end, numPoints);
+                            
+                            if (allPoints.length === 0) {
+                                allPoints = points;
+                            } else {
+                                // For subsequent segments, skip the first point
+                                allPoints = allPoints.concat(points.slice(1));
+                            }
+                        }
+                        break;
+                    case 'Z':
+                    case 'z':
+                        currentPoint = startPoint;
+                        break;
+                }
+            }
+            
+            // Apply jitter to all points
+            const jitteredPoints = jitterPoints(allPoints, config.jitter_amplitude);
+            
+            // Convert back to path data
+            return pointsToPathData(jitteredPoints, isClosed, config.curvy_lines);
+        }
+        
+        // Process all paths in SVG
+        function processSvgPaths(svgContent) {
+            // Create a temporary div to parse the SVG
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(svgContent, 'image/svg+xml');
+            const svgElement = doc.documentElement;
+            
+            if (!svgElement || svgElement.tagName !== 'svg') {
+                // If parsing failed, return original content
+                return svgContent;
+            }
+            
+            // Store original SVG attributes
+            const originalAttributes = {};
+            for (let i = 0; i < svgElement.attributes.length; i++) {
+                const attr = svgElement.attributes[i];
+                originalAttributes[attr.name] = attr.value;
+            }
+            
+            // Process all path elements
+            const paths = svgElement.querySelectorAll('path');
+            paths.forEach(path => {
+                const d = path.getAttribute('d');
+                if (d) {
+                    const jitteredD = processPath(d);
+                    path.setAttribute('d', jitteredD);
+                }
+            });
+            
+            // Restore original SVG attributes to ensure proper rendering
+            for (const [name, value] of Object.entries(originalAttributes)) {
+                svgElement.setAttribute(name, value);
+            }
+            
+            // Serialize the modified SVG back to string
+            const serializer = new XMLSerializer();
+            return serializer.serializeToString(svgElement);
+        }
+        
+        // Apply jitter function
+        function applyJitter() {
+            const originalSvg = document.getElementById('original-svg').value;
+            const jitteredSvg = processSvgPaths(originalSvg);
+            
+            // Update the display
+            document.getElementById('jittered-svg').innerHTML = jitteredSvg;
+            document.getElementById('jittered-code').value = jitteredSvg;
+        }
+        
+        // Initialize
+        window.addEventListener('load', () => {
+            applyJitter();
+        });
+    </script>
+</body>
+</html>
