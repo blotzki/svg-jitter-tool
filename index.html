@@ -307,9 +307,9 @@
             
             <div class="config-group">
                 <label>
-                    Segment Frequency: <span id="frequency-value" class="value-display">100</span>
+                    Segment Frequency: <span id="frequency-value" class="value-display">50</span>
                 </label>
-                <input type="range" id="segment-frequency" min="1" max="200" step="1" value="100">
+                <input type="range" id="segment-frequency" min="0" max="100" step="1" value="50">
             </div>
             
             <div class="config-group checkbox-group">
@@ -394,7 +394,7 @@
         });
         
         segmentFrequency.addEventListener('input', () => {
-            frequencyValue.textContent = segmentFrequency.value;
+            frequencyValue.textContent = parseInt(segmentFrequency.value);
             config.segment_frequency = parseInt(segmentFrequency.value);
             throttledApplyJitter();
         });
@@ -406,7 +406,7 @@
         
         // Initialize values
         amplitudeValue.textContent = jitterAmplitude.value;
-        frequencyValue.textContent = segmentFrequency.value;
+        frequencyValue.textContent = parseInt(segmentFrequency.value);
         
         // Complex number helper
         class Complex {
@@ -579,8 +579,10 @@
                             
                             // Calculate number of subdivisions
                             const length = end.sub(start).abs();
-                            const frequency = config.curvy_lines ? config.segment_frequency / 2 : config.segment_frequency;
-                            const numPoints = Math.max(2, Math.floor(length / frequency));
+                            // Convert frequency from 0-100 scale to a subdivision factor
+                            // 0 = no subdivisions, 100 = maximum subdivisions
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5; // Scale to 0-0.5 range for less extreme effect
+                            const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
                             
                             // Subdivide the line
                             const points = subdivideLine(start, end, numPoints);
@@ -601,8 +603,10 @@
                             
                             // Calculate number of subdivisions
                             const length = end.sub(start).abs();
-                            const frequency = config.curvy_lines ? config.segment_frequency / 2 : config.segment_frequency;
-                            const numPoints = Math.max(2, Math.floor(length / frequency));
+                            // Convert frequency from 0-100 scale to a subdivision factor
+                            // 0 = no subdivisions, 100 = maximum subdivisions
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5; // Scale to 0-0.5 range for less extreme effect
+                            const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
                             
                             // Subdivide the line
                             const points = subdivideLine(start, end, numPoints);
@@ -625,8 +629,10 @@
                             
                             // Calculate number of subdivisions
                             const length = end.sub(start).abs();
-                            const frequency = config.curvy_lines ? config.segment_frequency / 2 : config.segment_frequency;
-                            const numPoints = Math.max(2, Math.floor(length / frequency));
+                            // Convert frequency from 0-100 scale to a subdivision factor
+                            // 0 = no subdivisions, 100 = maximum subdivisions
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5; // Scale to 0-0.5 range for less extreme effect
+                            const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
                             
                             // Subdivide the line
                             const points = subdivideLine(start, end, numPoints);
@@ -648,8 +654,10 @@
                             
                             // Calculate number of subdivisions
                             const length = end.sub(start).abs();
-                            const frequency = config.curvy_lines ? config.segment_frequency / 2 : config.segment_frequency;
-                            const numPoints = Math.max(2, Math.floor(length / frequency));
+                            // Convert frequency from 0-100 scale to a subdivision factor
+                            // 0 = no subdivisions, 100 = maximum subdivisions
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5; // Scale to 0-0.5 range for less extreme effect
+                            const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
                             
                             // Subdivide the line
                             const points = subdivideLine(start, end, numPoints);
@@ -671,8 +679,10 @@
                             
                             // Calculate number of subdivisions
                             const length = end.sub(start).abs();
-                            const frequency = config.curvy_lines ? config.segment_frequency / 2 : config.segment_frequency;
-                            const numPoints = Math.max(2, Math.floor(length / frequency));
+                            // Convert frequency from 0-100 scale to a subdivision factor
+                            // 0 = no subdivisions, 100 = maximum subdivisions
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5; // Scale to 0-0.5 range for less extreme effect
+                            const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
                             
                             // Subdivide the line
                             const points = subdivideLine(start, end, numPoints);
@@ -694,8 +704,10 @@
                             
                             // Calculate number of subdivisions
                             const length = end.sub(start).abs();
-                            const frequency = config.curvy_lines ? config.segment_frequency / 2 : config.segment_frequency;
-                            const numPoints = Math.max(2, Math.floor(length / frequency));
+                            // Convert frequency from 0-100 scale to a subdivision factor
+                            // 0 = no subdivisions, 100 = maximum subdivisions
+                            const subdivisionFactor = (config.segment_frequency / 100) * 0.5; // Scale to 0-0.5 range for less extreme effect
+                            const numPoints = Math.max(2, Math.floor(length * subdivisionFactor));
                             
                             // Subdivide the line
                             const points = subdivideLine(start, end, numPoints);
@@ -1037,8 +1049,8 @@
             });
             
             segmentFrequency.addEventListener('input', () => {
-                frequencyValue.textContent = segmentFrequency.value;
-                config.segment_frequency = parseInt(segmentFrequency.value);
+                frequencyValue.textContent = parseFloat(segmentFrequency.value).toFixed(1);
+                config.segment_frequency = parseFloat(segmentFrequency.value);
                 throttledApplyJitter();
             });
             
